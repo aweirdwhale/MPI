@@ -1,0 +1,25 @@
+.PHONY: all exec debug clean cleanall
+
+CC = gcc
+SRC = $(wildcard *.c)
+OBJ = $(SRC:.c=.o)
+GCH = $(SRC:.c=.gch)
+EXEC = main
+CFLAGS += -Wall -Wextra
+LINK +=
+
+all: exec
+
+exec: $(EXEC)
+
+$(EXEC): $(OBJ) $(LINK)
+	$(CC) -o $@ $^ $(CFLAGS)
+
+%.o: %.c
+	$(CC) -o $@ -c $< $(CFLAGS)
+
+clean:
+	$(RM) $(OBJ) $(GCH)
+
+cleanall: clean
+	$(RM) $(EXEC)%
