@@ -75,17 +75,64 @@ type valuation = bool array
 
 
 
-let eval_litt x = failwith "not implemented"
-let eval x = failwith "not implemented"
+let eval_litt l valuation =
+  match l with
+  | P i -> valuation.(i)
+  | N i -> not valuation.(i)
+
+let eval deuxcnf valuation =
+  List.for_all (fun (l1, l2) ->
+    eval_litt l1 valuation || eval_litt l2 valuation
+  ) deuxcnf
+
 exception Last
-let incremente_valuation x = failwith "not implemented"
-let brute_force x = failwith "not implemented"
+
+let incremente_valuation valuation =
+  let rec incr n =
+    if n = (-1) then
+      raise Last
+    else if valuation.(n) then begin
+      valuation.(n) <- false;
+      incr (n-1)
+    end else
+      valuation.(n) <- true
+  in
+  incr (Array.length valuation - 1)
+
+
+let brute_force x =
+
+  (* Trouve l'indice maximal de variable dans la formule *)
+  let max_var x =
+    let max_litt l =
+      match l with
+      | P i -> i
+      | N i -> i
+    in
+
+    List.fold_left (fun acc (l1, l2) ->
+      max acc (max (max_litt l1) (max_litt l2))
+    ) 0 x
+    in
+    let n = max_var x + 1 in
+    let valuation = Array.make n false in
+    let rec try_all () =
+      if eval x valuation then Some (Array.copy valuation)
+      else
+        try
+          incremente_valuation valuation;
+          try_all ()
+        with Last -> None
+    in
+    try_all ()
+
+
 let graphe_de_cnf x = failwith "not implemented"
 let satisfiable x = failwith "not implemented"
 let temoin x = failwith "not implemented"
 
 
-
+(*
 let main () =
   let g = read_graph () in
   let g_prime = transpose g in
@@ -107,4 +154,4 @@ let main () =
 
 
 
-let () = main ()
+let () = main () *)
