@@ -173,70 +173,51 @@ let graphe_de_cnf deux_cnf =
 let satisfiable deuxcnf =
   let g = graphe_de_cnf deuxcnf in
   let cfc = kosaraju g in
-  let len = Array.length g in (* on peut pas diviser par deux ici à cause du tab de marquage*)
+  let len = Array.length g in
   let marques = Array.make len (-1) in
 
-  List.iteri (fun i composante -> begin
-    List.iter (fun s -> begin
-      if marques.(s) == -1 then
-        marques.(s) <- i
-      else
-        failwith "What ?!"
-      end
-    ) composante;
-    end
+  (* Marquage de chaque sommet avec l'indice de sa CFC *)
+  List.iteri (fun i comp ->
+    List.iter (fun s -> marques.(s) <- i) comp
   ) cfc;
 
-  let out = ref true in
-  for i = 0 to (len / 2) do
-    out := !out && (marques.(i) <> marques.(i+1))
-  done;
+  let n = len / 2 in
+  (* Vérifie si une variable et sa négation appartiennent à la même CFC *)
+  let ok =
+    let rec aux i =
+      if i = n then true
+      else if marques.(2*i) = marques.(2*i+1) then false
+      else aux (i+1)
+    in
+    aux 0
+  in
+  ok
 
-  !out
 
-
-(*
-let main () =
-  let g = read_graph () in
-  let g_prime = transpose g in
-  print_string "--- Test de lecture du graphe. ---\nLe sommet d'indice 0 du graphe a les voisins suivants :\n";
-  List.iter (Printf.printf "%d \n") g.(0);
-  print_newline ();
-  List.iter (Printf.printf "%d \n") g_prime.(0);
-  let parcours = dfs_post g in
-  List.iter (fun s -> Printf.printf "%d " s) parcours;
-  print_newline ();
-  print_string "--- Test de kosaraju ---\n";
+let temoin deuxcnf =
+  let g = graphe_de_cnf deuxcnf in
   let cfc = kosaraju g in
-  Printf.printf "Nombre de composantes fortement connexes : %d\n" (List.length cfc);
+  let len = Array.length g in
+  let marques = Array.make len (-1) in
+
   List.iteri (fun i comp ->
-    Printf.printf "CFC #%d : " (i+1);
-    List.iter (fun s -> Printf.printf "%d " s) comp;
-    print_newline ()
-  ) cfc
+    List.iter (fun s -> marques.(s) <- i) comp
+  ) cfc;
 
-*)
-
-(* let main =
-  let deux_cnf_test = [(P 0, N 2); (P 1, P 3); (N 1, P 2); (N 2, P 3); (P 3, N 0)] in
-  let deux_cnf_test_false = [(P 0, N 1); (P 0, P 1)]
-in
-let g = graphe_de_cnf deux_cnf_test in
-print_string "--- Test de graphe_de_cnf ---\n";
-for i = 0 to Array.length g - 1 do
-  Printf.printf "Sommet %d : " i;
-  List.iter (Printf.printf "%d ") g.(i);
-  print_newline ()
-done;
-print_string "--- Test de satisfiable ---\n";
-if satisfiable deux_cnf_test then
-  Printf.printf "La formule est satisfiable.\n"
-else
-  Printf.printf "La formule n'est pas satisfiable.\n";
-  if satisfiable deux_cnf_test_false then
-    Printf.printf "La formule est satisfiable.\n"
+  let n = len / 2 in
+  (* Vérifie satisfiabilité *)
+  let ok =
+    let rec aux i =
+      if i = n then true
+      else if marques.(2*i) = marques.(2*i+1) then false
+      else aux (i+1)
+    in aux 0
+  in
+  if not ok then None
   else
-    Printf.printf "La formule n'est pas satisfiable.\n" *)
-
-
-(* let () = main *)
+    (* Construit la valuation à partir de l'ordre des CFC *)
+    let valuation = Array.make n false in
+    for i = 0 to n-1 do
+      valuation.(i) <- marques.(2*i) > marques.(2*i+1)
+    done;
+    Some valuation
