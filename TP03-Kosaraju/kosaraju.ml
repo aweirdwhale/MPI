@@ -170,32 +170,29 @@ let graphe_de_cnf deux_cnf =
   g
 
 
-let satisfiable phi =
-  let gphi = graphe_de_cnf phi in
-  let cfc = kosaraju gphi in
-  let len = Array.length gphi in
-  let marquage = Array.make len false in
+let satisfiable deuxcnf =
+  let g = graphe_de_cnf deuxcnf in
+  let cfc = kosaraju g in
+  let len = Array.length g in (* on peut pas diviser par deux ici à cause du tab de marquage*)
+  let marques = Array.make len (-1) in
 
   List.iteri (fun i composante -> begin
     List.iter (fun s -> begin
-      if marquage.(s) == false then
-        marquage.(s) <- true
-      else failwith "un sommet ne renvoit pas vers lui meme"
+      if marques.(s) == -1 then
+        marques.(s) <- i
+      else
+        failwith "What ?!"
       end
     ) composante;
     end
   ) cfc;
 
   let out = ref true in
-    for i = 0 to (len/2) do
-      out := !out && (marquage.(i) <> marquage.(i+1))
-    done;
+  for i = 0 to (len / 2) do
+    out := !out && (marques.(i) <> marques.(i+1))
+  done;
 
-    !out
-
-
-
-let temoin x = failwith "not implemented"
+  !out
 
 
 (*
