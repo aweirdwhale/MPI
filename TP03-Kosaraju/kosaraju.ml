@@ -127,8 +127,74 @@ let brute_force x =
     try_all ()
 
 
-let graphe_de_cnf x = failwith "not implemented"
-let satisfiable x = failwith "not implemented"
+
+let graphe_de_cnf deux_cnf =
+  (*
+    Traduit une formule 2-CNF en un graphe d'implication.
+    Pour chaque littéral Xi, le sommet est 2*i si Xi, 2*i+1 si non(Xi).
+    Chaque clause (l1, l2) donne deux implications :
+      - non(l1) -> l2
+      - non(l2) -> l1
+    On construit le graphe par liste d'adjacence.
+  *)
+  let max_var x =
+    let max_litt l =
+      match l with
+      | P i -> i
+      | N i -> i
+    in
+    List.fold_left (fun acc (l1, l2) ->
+      max acc (max (max_litt l1) (max_litt l2))
+    ) 0 x
+  in
+  let n = max_var deux_cnf + 1 in (*1/2 taille du graphe*)
+  let g = Array.make (2*n) [] in
+
+  let node_of_litt l =
+    match l with
+    | P i -> 2*i
+    | N i -> 2*i+1
+  in
+  let node_of_not_litt l =
+    match l with
+    | P i -> 2*i+1
+    | N i -> 2*i
+  in
+
+  List.iter (fun (l1, l2) ->
+    (* non(l1) -> l2 *)
+    g.(node_of_not_litt l1) <- node_of_litt l2 :: g.(node_of_not_litt l1);
+    (* non(l2) -> l1 *)
+    g.(node_of_not_litt l2) <- node_of_litt l1 :: g.(node_of_not_litt l2);
+  ) deux_cnf;
+  g
+
+
+let satisfiable phi =
+  let gphi = graphe_de_cnf phi in
+  let cfc = kosaraju gphi in
+  let len = Array.length gphi in
+  let marquage = Array.make len false in
+
+  List.iteri (fun i composante -> begin
+    List.iter (fun s -> begin
+      if marquage.(s) == false then
+        marquage.(s) <- true
+      else failwith "un sommet ne renvoit pas vers lui meme"
+      end
+    ) composante;
+    end
+  ) cfc;
+
+  let out = ref true in
+    for i = 0 to (len/2) do
+      out := !out && (marquage.(i) <> marquage.(i+1))
+    done;
+
+    !out
+
+
+
 let temoin x = failwith "not implemented"
 
 
@@ -152,6 +218,28 @@ let main () =
     print_newline ()
   ) cfc
 
+*)
+
+(* let main =
+  let deux_cnf_test = [(P 0, N 2); (P 1, P 3); (N 1, P 2); (N 2, P 3); (P 3, N 0)] in
+  let deux_cnf_test_false = [(P 0, N 1); (P 0, P 1)]
+in
+let g = graphe_de_cnf deux_cnf_test in
+print_string "--- Test de graphe_de_cnf ---\n";
+for i = 0 to Array.length g - 1 do
+  Printf.printf "Sommet %d : " i;
+  List.iter (Printf.printf "%d ") g.(i);
+  print_newline ()
+done;
+print_string "--- Test de satisfiable ---\n";
+if satisfiable deux_cnf_test then
+  Printf.printf "La formule est satisfiable.\n"
+else
+  Printf.printf "La formule n'est pas satisfiable.\n";
+  if satisfiable deux_cnf_test_false then
+    Printf.printf "La formule est satisfiable.\n"
+  else
+    Printf.printf "La formule n'est pas satisfiable.\n" *)
 
 
-let () = main () *)
+(* let () = main *)
