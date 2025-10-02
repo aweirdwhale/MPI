@@ -118,16 +118,16 @@ let graphe_de_couplage gb c =
     if gb.partition.(v) = true && not (est_couvert v c) then
       res.(s_idx) <- v :: res.(s_idx)
   done;
-  (* 2) pour chaque arête (u,v) du graphe d'origine :
+  (* 2) pour toute arête (u,v) de gb :
        - si u ∈ X et v ∈ Y :
-           si (u,v) ∈ C alors on ajoute l'arête v -> u (arête de couplage inversée)
+           si (u,v) ∈ C alors on ajoute l'arête v -> u (arête inversée)
            sinon on ajoute l'arête u -> v (arête non couplée)
-       (si liste d'adjacence contient les deux sens, la condition partition assure que chacun est traité une fois)
+       (si liste d'adjacence contient deux sens, la partition assure que chacun est traité une fois)
   *)
-  (* d'abord, pour les arêtes du couplage, ajouter v->u *)
+  (* pour toute arête du couplage, ajouter v->u *)
   List.iter
     (fun ar ->
-       (* déterminer lequel est dans X *)
+       (* dét. qui est dans X *)
        if gb.partition.(ar.x) then
          (* ar.x in X, ar.y in Y *)
          res.(ar.y) <- ar.x :: res.(ar.y)
@@ -137,12 +137,12 @@ let graphe_de_couplage gb c =
        else
          () )
     c;
-  (* ensuite, pour toutes les arêtes du graphe, ajouter les arêtes non couplées u->v lorsque u∈X, v∈Y et (u,v)∉C *)
+  (* pour toute arête de G, add arêtes non couplées u->v lorsque u∈X, v∈Y et (u,v)∉C *)
   for u = 0 to n - 1 do
     if gb.partition.(u) then
       List.iter
         (fun v ->
-           (* considérer uniquement voisins en Y *)
+           (* uniquement voisins en Y *)
            if not gb.partition.(v) then
              let ar = { x = u; y = v } in
              if not (est_dans_couplage ar c) then
@@ -150,18 +150,34 @@ let graphe_de_couplage gb c =
         )
         gb.g.(u)
   done;
-  (* enfin, arêtes y -> t pour tout y ∈ Y non couvert *)
+  (* y -> t pour tout y ∈ Y non couvert *)
   for v = 0 to n - 1 do
     if not gb.partition.(v) && not (est_couvert v c) then
       res.(v) <- t_idx :: res.(v)
   done;
-  (* retourner le graphe orienté construit *)
+  (* graphe orienté construit *)
   res
 
 
 (* renvoie le tableau des prédécesseurs dans un parcours (quelconque) de g depuis s *)
 let arbre_parcours g s =
-  failwith "TODO"
+  let n = Array.length g in
+  let pred = Array.make n (-1) in
+  let q = Queue.create () in
+  pred.(s) <- s; (* racine a pour prédécesseur elle-même *)
+  Queue.add s q;
+  while not (Queue.is_empty q) do
+    let u = Queue.take q in
+    List.iter
+      (fun v ->
+          if pred.(v) = -1 then (
+            pred.(v) <- u;
+            Queue.add v q
+          )
+      )
+      g.(u)
+  done;
+  pred
 
 
 (* Construis un chemin de s à t dans g, s'il existe, sous la forme d'une liste d'arêtes.

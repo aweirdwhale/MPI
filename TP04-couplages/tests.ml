@@ -1,6 +1,17 @@
-(* --- Tests unitaires --- *)
 (* Mettre à la fin du fichier *)
 
+(* --- Fonctions utilitaires pour afficher --- *)
+
+let string_of_arete a = Printf.sprintf "(%d,%d)" a.x a.y
+
+let string_of_couplage c =
+  "[" ^ String.concat "; " (List.map string_of_arete c) ^ "]"
+
+let print_couplage c =
+  Printf.printf "%s\n" (string_of_couplage c)
+
+
+(* --- Tests unitaires --- *)
 let () =
   (* Test est_dans_couplage *)
   let c = [{x=0;y=1}; {x=2;y=3}] in
