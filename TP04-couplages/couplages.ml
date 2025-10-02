@@ -86,7 +86,7 @@ let prive_de a b =
        else arete :: tri
     )
     [] a
-  |> List.rev
+  (* |> List.rev *)
 
 
 let difference_symetrique c1 c2 =
@@ -112,11 +112,11 @@ let graphe_de_couplage gb c =
   let s_idx = n in (* index de s *)
   let t_idx = n + 1 in (* index de t *)
 
-  let res = Array.make (n + 2) [] in
-  (* 1) arêtes s -> x pour tout x ∈ X non couvert *)
+  let gbc = Array.make (n + 2) [] in
+  (* 1) arêtes s -> x pour tout x ∈ X (partition(s) = true) non couvert *)
   for v = 0 to n - 1 do
     if gb.partition.(v) = true && not (est_couvert v c) then
-      res.(s_idx) <- v :: res.(s_idx)
+      gbc.(s_idx) <- v :: gbc.(s_idx)
   done;
   (* 2) pour toute arête (u,v) de gb :
        - si u ∈ X et v ∈ Y :
@@ -130,10 +130,10 @@ let graphe_de_couplage gb c =
        (* dét. qui est dans X *)
        if gb.partition.(ar.x) then
          (* ar.x in X, ar.y in Y *)
-         res.(ar.y) <- ar.x :: res.(ar.y)
+         gbc.(ar.y) <- ar.x :: gbc.(ar.y)
        else if gb.partition.(ar.y) then
          (* ar.y in X, ar.x in Y *)
-         res.(ar.x) <- ar.y :: res.(ar.x)
+         gbc.(ar.x) <- ar.y :: gbc.(ar.x)
        else
          () )
     c;
@@ -146,25 +146,26 @@ let graphe_de_couplage gb c =
            if not gb.partition.(v) then
              let ar = { x = u; y = v } in
              if not (est_dans_couplage ar c) then
-               res.(u) <- v :: res.(u)
+               gbc.(u) <- v :: gbc.(u)
         )
         gb.g.(u)
   done;
   (* y -> t pour tout y ∈ Y non couvert *)
   for v = 0 to n - 1 do
     if not gb.partition.(v) && not (est_couvert v c) then
-      res.(v) <- t_idx :: res.(v)
+      gbc.(v) <- t_idx :: gbc.(v)
   done;
   (* graphe orienté construit *)
-  res
+  gbc
 
 
 (* renvoie le tableau des prédécesseurs dans un parcours (quelconque) de g depuis s *)
+(*classico parcours*)
 let arbre_parcours g s =
   let n = Array.length g in
   let pred = Array.make n (-1) in
   let q = Queue.create () in
-  pred.(s) <- s; (* racine a pour prédécesseur elle-même *)
+  pred.(s) <- s; (* parent de racine = racine *)
   Queue.add s q;
   while not (Queue.is_empty q) do
     let u = Queue.take q in
@@ -182,16 +183,49 @@ let arbre_parcours g s =
 
 (* Construis un chemin de s à t dans g, s'il existe, sous la forme d'une liste d'arêtes.
   S'il n'en existe pas, on renvoie le chemin vide []. *)
+  (* idée : regarder à l'envers tout les prédécesseurs successifs de t jusqu'à trv s *)
 let chemin g s t =
-  failwith "TODO"
+  let pred = arbre_parcours g s in
+    if pred.(t) = -1 then [] else (* pas de predecesseur = pas de chemin possible *)
+    (* liste de sommets de t à s *)
+
+    let rec build acc v =
+      if v = s then s :: acc else build (v :: acc) pred.(v)
+    in
+    let sommets = build [] t in
+    (* transformer en liste d'arêtes (x -> y) suivant l'ordre de sommets *)
+    let rec aux acc = function
+      | [] | [_] -> List.rev acc
+      | u :: v :: rest -> aux ({ x = u; y = v } :: acc) (v :: rest)
+    in
+    aux [] sommets
 
 
 
 let couplage_maximum_biparti gb =
-  failwith "TODO"
+  let n = Array.length gb.g in
+  let s_idx = n in
+  let t_idx = n+1 in
 
+  let rec loop c =
+    let gc = graphe_de_couplage gb c in
+    let p = chemin gc s_idx t_idx in
+    if p = [] then c
+    else
+      (*recup art de gb sans celles de s et t*)
+      (* u->v dans p corr. une art de gb (u<n, v<n) *)
+      let path_edg =
+        List.fold_left
+        (fun art_sans_st art ->
+          if art.x < n && art.y <n
+          then ({x = art.x; y=art.y} :: art_sans_st)
+          else art_sans_st
+        ) [] p in
 
-open Printf
+    let c' = difference_symetrique c path_edg in
+    loop c'
+  in loop []
+
 
 (* --- Fonctions utilitaires pour afficher --- *)
 
@@ -256,3 +290,5 @@ let () =
   let cmax3 = couplage_maximum_biparti gb_non_connexe in
   Printf.printf "Couplage maximum gb_non_connexe = %s\n" (string_of_couplage cmax3);
   assert (List.length cmax3 >= 2);
+
+  Printf.printf "✓ Couplage max biparti OK\n"
