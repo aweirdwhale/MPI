@@ -1,0 +1,8 @@
+let reconstruit (parents: ('a, 'a) Hashtbl.t) (x: 'a) =
+  let out = ref [x] in
+
+  while Hashtbl.find parents (List.hd !out) <> (List.hd !out) do
+    out := Hashtbl.find parents (List.hd !out) :: !out
+  done;
+
+  !out
