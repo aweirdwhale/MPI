@@ -52,27 +52,16 @@ let distance i j value =
   let j_target = value mod n in
   abs (i - i_target) + abs (j - j_target)
 
-(* crée un tableau des positions de chaque tuile *)
-let construit_positions e =
-  Array.init (n * n) (fun _ -> (0,0)) |> fun positions ->
+
+let calcule_h e =
+  let h = ref 0 in
+
   for i = 0 to n-1 do
     for j = 0 to n-1 do
       let v = e.grille.(i).(j) in
-      positions.(v) <- (i,j)
-    done
-  done;
-  positions
-
-let calcule_h e =
-  let positions = construit_positions e in
-  let h = ref 0 in
-  for v = 0 to (n * n - 2) do  (* exclut la tuile vide *)
-
-      let (i, j) = positions.(v) in
-      if (i, j) <> (e.i, e.j) then begin
-        h := !h + distance i j v end
-      else
-        h := !h
+      if (i, j) <> (e.i, e.j) then (* ne pas compter la case vide dans h *)
+        h := !h + distance i j v
+    done;
   done;
   e.h <- !h
 
@@ -244,13 +233,82 @@ let reconstruit (parents: ('a, 'a) Hashtbl.t) (x: 'a) =
   !out
 
 
+let compare_etats e1 e2 =
+  let equal = ref true in
+  for i = 0 to n - 1 do
+    for j = 0 to n - 1 do
+      if not (i = e1.i && j = e1.j) then  (* on ignore la case vide *)
+        if e1.grille.(i).(j) <> e2.grille.(i).(j) then equal := false
+    done
+  done;
+  !equal
 
 exception Aucun_chemin
 
-(* Version corrigée de astar *)
-let astar initial = failwith "TODO"
+let astar initial =
+(* Initialisation des tables *)
+let parents = Hashtbl.create 200 in    (* etat -> etat (parent) *)
+let gscore  = Hashtbl.create 200 in    (* etat -> int (g) *)
+let closed  = Hashtbl.create 200 in    (* etat -> ()  (ensemble fermé) *)
 
+(* s'assurer que l'heuristique de l'initial est correcte *)
+let () = calcule_h initial in
 
+(* frontier : tas de priorité, clé = etat, priorité = f = g + h *)
+let frontier = Heap.create () in
+
+(* initialisation *)
+Hashtbl.add parents initial initial;
+Hashtbl.add gscore initial 0;
+Heap.insert_or_decrease frontier (initial, initial.h);  (* f = 0 + h(initial) *)
+
+(* résultat : on retournera la liste d'états depuis source vers final *)
+let result = ref None in
+
+(* boucle principale *)
+let finished = ref false in
+while not !finished do
+  match Heap.extract_min frontier with
+  | None -> (* plus rien à explorer *)
+    raise Aucun_chemin
+  | Some (current, _prio) ->
+    (* Si current a déjà été mis dans closed, on l'ignore *)
+    if not (Hashtbl.mem closed current) then begin
+      (* marquer comme exploré *)
+      Hashtbl.add closed current ();
+
+      (* Si current est l'état final (comparaison structurelle des grilles) *)
+      if (compare_etats current final) then begin
+        result := Some (reconstruit parents current);
+        finished := true
+      end else begin
+        (* explorer voisins *)
+        let voisins = successeurs current in
+        List.iter (fun v ->
+          let tentative_g =
+            (try Hashtbl.find gscore current with Not_found -> max_int) + 1
+          in
+          let old_g_opt = Hashtbl.find_opt gscore v in
+          let should_update =
+            match old_g_opt with
+            | None -> true
+            | Some old_g -> tentative_g < old_g
+          in
+          if should_update then begin
+            Hashtbl.replace parents v current;
+            Hashtbl.replace gscore v tentative_g;
+            let f_v = tentative_g + v.h in
+            (* insérer ou diminuer la priorité dans le tas *)
+            Heap.insert_or_decrease frontier (v, f_v)
+          end
+        ) voisins
+      end
+    end
+done;
+(* renvoyer le résultat si trouvé *)
+match !result with
+| None -> raise Aucun_chemin
+| Some path -> path
 
 
 
