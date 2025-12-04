@@ -1,0 +1,23 @@
+EXEC=exe
+SRC=kmeans.c
+OBJ=$(SRC:%.c=%.o)
+GCH=$(SRC:%.c=%.gch)
+CFLAGS += -Wall -Wextra
+LINK += -L. -loutils
+
+all: $(EXEC)
+
+$(EXEC) : $(OBJ)
+	gcc -o $@ $^ $(LINK) $(CFLAGS)
+	@echo "Exécution : 'make run' ou 'LD_LIBRARY_PATH=. ./$@ arguments'"
+
+run : $(EXEC)
+	LD_LIBRARY_PATH=. ./$^ add-alpha gradient.png gradient-alpha.png
+
+$(OBJ) : $(SRC)
+	gcc -c $^ -o $@ $(CFLAGS)
+	
+clean :
+	rm -f $(EXEC)
+	rm -f $(OBJ)
+	rm -f $(GCH)

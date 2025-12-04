@@ -1,0 +1,13 @@
+2.a grep -E 'w' francais.txt | grep -E 'q'
+2.b grep -E '(i.*){6}' francais.txt
+2.c grep -E '([aeiouy].*){10}' francais.txt
+2.d grep -E '^p' francais.txt | grep -E '([aeiouy].*){9}'
+
+4. Rien de s'affiche pcq l'output est redirigé vers un fichier texte
+
+5.a grep -E 'the' moby_dick.txt | wc --lines
+5.b grep -E '(the.*){2}' moby_dick.txt | wc --lines
+
+6. calcule le nb exact d'occurences de the
+
+7. grep -E '([aeiouy].*){8}' francais.txt | grep -E '(y.*){2}'
