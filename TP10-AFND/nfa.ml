@@ -311,7 +311,51 @@ let rec max_letter x =
   | Concat (r1, r2) -> max (max_letter r1) (max_letter r2)
   | Star r1 -> max_letter r1
 
-let glushkov e = failwith "not implemented"
+let glushkov e =
+  let lin_e = linearize e in
+  let next_num = number_of_letters e + 1 in
+  let nb_letters = next_num - 1 in
+
+  (* On construit l'automate *)
+  let n = nb_letters + 1 in
+  let m = max_letter e + 1 in
+  let delta = Array.make_matrix n m [] in
+  let accepting = Array.make n false in
+
+  (* Table pour retrouver la lettre associée à chaque numéro *)
+  let num_to_letter = Array.make (nb_letters + 1) (-1) in
+  let rec fill_num_to_letter x =
+    match x with
+    | Empty | Eps -> ()
+    | Letter (l, num) -> num_to_letter.(num) <- l
+    | Union (r1, r2) | Concat (r1, r2) -> fill_num_to_letter r1; fill_num_to_letter r2
+    | Star r -> fill_num_to_letter r
+  in
+  fill_num_to_letter lin_e;
+
+  (* 1. De l'état initial (0) vers chaque lettre de prefix *)
+  let pre = prefix e in
+  List.iter (fun (l, num) -> delta.(0).(l) <- num :: delta.(0).(l)) pre;
+
+  (* 2. Pour chaque facteur (a,b), transition de état a vers état b sur lettre b *)
+  let fac = factor_lin lin_e in
+  List.iter (fun ((_, num_a), (l_b, num_b)) ->
+    delta.(num_a).(l_b) <- num_b :: delta.(num_a).(l_b)
+  ) fac;
+
+  (* 3. Etats acceptants : ceux correspondant aux lettres dans suffix, et l'état initial si epsilon *)
+  let suf = suffix_lin lin_e in
+  List.iter (fun (_, num) -> accepting.(num) <- true) suf;
+  if contains_epsilon_lin lin_e then accepting.(0) <- true;
+
+  (* On trie et enlève les doublons dans les listes de transitions *)
+  for q = 0 to n - 1 do
+    for x = 0 to m - 1 do
+      delta.(q).(x) <- List.sort_uniq compare delta.(q).(x)
+    done
+  done;
+
+  {delta = delta; accepting = accepting}
 
 
 
